@@ -1,72 +1,23 @@
-import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import * as dat from 'lil-gui'
-import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js'
+// John Napoleon Cortes  ITE18 - AD1
 
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// == Base
-
-// Canvas
-const canvas = document.querySelector('canvas.webgl')
-// Scene
-const scene = new THREE.Scene()
-
-
-
-// -- Lights
-// Ambient Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-scene.add(ambientLight)
-
-// Equals
-// const ambientLight = new THREE.AmbientLight()
-ambientLight.color = new THREE.Color(0xffffff)
-ambientLight.intensity = 0.5
-scene.add(ambientLight)
-
-
-
-
-
-/**
- * Objects
- */
-// Material
-const material = new THREE.MeshStandardMaterial()
-material.roughness = 0.4
-
-// Objects
-const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(0.5, 32, 32),
-    material
-)
-sphere.position.x = - 1.5
-
-const cube = new THREE.Mesh(
-    new THREE.BoxGeometry(0.75, 0.75, 0.75),
-    material
-)
-
-const torus = new THREE.Mesh(
-    new THREE.TorusGeometry(0.3, 0.2, 32, 64),
-    material
-)
-torus.position.x = 1.5
-
-const plane = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    material
-)
-plane.rotation.x = - Math.PI * 0.5
-plane.position.y = - 0.65
-
-scene.add(sphere, cube, torus, plane)
-
-// -- Size
+// Sizes
 const sizes = {
     width: window.innerWidth,
     height: window.innerHeight
 }
+
+// Renderer
+const canvas = document.querySelector('canvas.webgl');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setSize(sizes.width, sizes.height);
+
+renderer.setPixelRatio(window.devicePixelRatio > 1 ? 2 : 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 
 window.addEventListener('resize', () => {
     // Update sizes
@@ -82,52 +33,141 @@ window.addEventListener('resize', () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-// -- Base Camera
-// Base camera
-const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 1
-camera.position.y = 1
-camera.position.z = 2
-scene.add(camera)
+// Scene
+const scene = new THREE.Scene();
 
-// Controls
-const controls = new OrbitControls(camera, canvas)
-controls.enableDamping = true
+// Camera
+const camera = new THREE.PerspectiveCamera(
+    100, // fov
+    sizes.width / sizes.height, // aspect ratio
+    .1, // near limit
+    1000 // far limit
+);
+camera.position.set(4, 7, 7);
+scene.add(camera);
 
-// -- Renderer
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
-renderer.setSize(sizes.width, sizes.height)
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 
-// Debug
-const gui = new dat.GUI()
-gui.add(ambientLight, 'intensity').min(0).max(1).step(0.001)
+// Lights
+// Ambient Lights
+const ambientLight = new THREE.AmbientLight(0xffffff, .3);
+scene.add(ambientLight);
 
-// -- Animate
-const clock = new THREE.Clock()
+// Directional Lights
+const directionalLight = new THREE.DirectionalLight(0xffffff, .5);
+directionalLight.position.set(0, 10, 0);
+directionalLight.castShadow = true;
+scene.add(directionalLight);
 
-const tick = () => {
-    const elapsedTime = clock.getElapsedTime()
+const lightSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+);
+lightSphere.position.copy(directionalLight.position);
+scene.add(lightSphere);
 
-    // Update objects
-    sphere.rotation.y = 0.1 * elapsedTime
-    cube.rotation.y = 0.1 * elapsedTime
-    torus.rotation.y = 0.1 * elapsedTime
+// SpotLight
+const spotLight = new THREE.SpotLight('pink', 200, 20, Math.PI / 10, 0, 1.5)
+spotLight.position.set(5, 7, 2)
+spotLight.target.position.set(-90, -90, 0);
+spotLight.castShadow = true;
 
-    sphere.rotation.x = 0.15 * elapsedTime
-    cube.rotation.x = 0.15 * elapsedTime
-    torus.rotation.x = 0.15 * elapsedTime
+spotLight.shadow.camera.near = 0.5;
+spotLight.shadow.camera.far = 50;
+spotLight.shadow.camera.fov = 30;
 
-    // Update controls
-    controls.update()
+scene.add(spotLight);
+scene.add(spotLight.target);
 
-    // Render
-    renderer.render(scene, camera)
+// Helpers
+const spotLightHelper = new THREE.SpotLightHelper(spotLight);
+scene.add(spotLightHelper);
 
-    // Call tick again on the next frame
-    window.requestAnimationFrame(tick)
+const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 3);
+scene.add(directionalLightHelper);
+
+
+// Cube Object
+const sideColors = {
+    top: 0xffff00,      // yellow
+    bottom: 0xffffff,     // white
+    left: 0xff0000,     // red
+    right: 0xff5500,   // orange
+    back: 0x0000ff,    // blue
+    front: 0x00ff00,    // green
 }
 
-tick()
+const materials = [
+    new THREE.MeshStandardMaterial({ color: sideColors.right }),
+    new THREE.MeshStandardMaterial({ color: sideColors.left }),
+    new THREE.MeshStandardMaterial({ color: sideColors.top }),
+    new THREE.MeshStandardMaterial({ color: sideColors.bottom }),
+    new THREE.MeshStandardMaterial({ color: sideColors.front }),
+    new THREE.MeshStandardMaterial({ color: sideColors.back }),
+];
+
+const cube = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2), materials);
+cube.castShadow = true;
+
+const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2));
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
+const lineSegments = new THREE.LineSegments(edges, lineMaterial);
+cube.add(lineSegments);
+
+// Ground Object
+const groundMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(20, .01, 20),
+    new THREE.MeshStandardMaterial({ color: 0x2e2e2e, roughness: .2 })
+);
+groundMesh.rotation.y = THREE.MathUtils.degToRad(45);
+groundMesh.position.y = - 2
+groundMesh.receiveShadow = true;
+
+scene.add(cube, groundMesh)
+
+// Controls
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+
+// Animation
+const clock = new THREE.Clock()
+
+const planeSize = 10;
+// Initial and target positions for the spotlight target
+const targetPosition = new THREE.Vector3(
+    (Math.random() - 0.5) * planeSize, 0,
+    (Math.random() - 0.5) * planeSize);
+
+const currentTargetPosition = spotLight.target.position.clone(); // Start at the current target position
+
+const tick = () => {
+    const elapsedTime = clock.getElapsedTime();
+
+    // Cube rotation
+    cube.rotation.y = 0.5 * elapsedTime
+    cube.rotation.x = 0.5 * elapsedTime
+
+    //  Randomly movethe spotlight 
+    currentTargetPosition.lerp(targetPosition, 0.02);
+    spotLight.target.position.copy(currentTargetPosition);
+    spotLight.target.updateMatrixWorld();
+
+    if (currentTargetPosition.distanceTo(targetPosition) < 0.1) {
+        targetPosition.set(
+            (Math.random() - 0.5) * planeSize, 0,
+            (Math.random() - 0.5) * planeSize);
+    }
+
+    // Update spotlight helper
+    spotLightHelper.update();
+
+    // Update controls
+    controls.update();
+
+    // Render 
+    renderer.render(scene, camera);
+
+    // Call tick again on the next frame
+    window.requestAnimationFrame(tick);
+};
+
+tick();
